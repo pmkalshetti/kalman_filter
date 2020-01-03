@@ -10,3 +10,9 @@ The sensor reads 2D position of the object. We assume a fixed velocity for the o
 python src/sensor.py
 ```
 ![Measurements](media_readme/measurements.png)
+
+2. Filter
+```python
+python src/simple_filter.py
+```
+![Filter (simple)](media_readme/filter_simple.png)

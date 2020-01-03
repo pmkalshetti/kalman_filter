@@ -2,7 +2,6 @@ import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 from sensor import Sensor
-from matplotlib.patches import Ellipse
 
 
 def construct_filter(dim_state, dim_measurement,
@@ -77,20 +76,46 @@ def design_simple_filter():
             state_init, cov_state_init)
 
 
-def plot_state(means, covariances, ax):
+def get_ellipse_from_covariance(mat_cov, val_chisquare=2.4477):
+    """95% confidence interval => 2.4477 chisquare value."""
+    # calculate largest and smallest eigenvalues and eigenvectors
+    val_eig, vec_eig = np.linalg.eig(mat_cov)
+    idx_max, idx_min = np.argmax(val_eig), np.argmin(val_eig)
+    val_eig_max, val_eig_min = val_eig[idx_max], val_eig[idx_min]
+    vec_eig_max = vec_eig[idx_max]
+
+    # angle between X-axis and largest eigenvector
+    angle = np.arctan2(vec_eig_max[1], vec_eig_max[0])
+    if angle < 0:  # [-pi, pi] --> [0, 2pi]
+        angle += 2*np.pi
+
+    # ellipse points
+    a = val_chisquare * np.sqrt(val_eig_max)
+    b = val_chisquare * np.sqrt(val_eig_min)
+
+    points_along_curve = np.linspace(0, 2*np.pi)
+    x_ellipse = a * np.cos(points_along_curve)
+    y_ellipse = b * np.sin(points_along_curve)
+    points_ellipse_2_N = np.stack([x_ellipse, y_ellipse], axis=0)
+
+    # rotate ellipse
+    mat_rotation = np.array([
+        [np.cos(angle), np.sin(angle)],
+        [-np.sin(angle), np.cos(angle)]
+    ])
+    points_ellipse_2_N = mat_rotation @ points_ellipse_2_N
+    points_ellipse = np.transpose(points_ellipse_2_N)
+
+    return points_ellipse
+
+
+def plot_states(means, covariances, ax):
     for mean, cov in zip(means, covariances):
-        pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
-        # Using a special case to obtain the eigenvalues of this
-        # two-dimensionl dataset.
-        ell_radius_x = np.sqrt(1 + pearson)
-        ell_radius_y = np.sqrt(1 - pearson)
-        ellipse = Ellipse(
-            mean,
-            width=ell_radius_x * 2,
-            height=ell_radius_y * 2,
-            facecolor="none", edgecolor="blue", alpha=0.7
+        points_ellipse = get_ellipse_from_covariance(cov)
+        ax.plot(
+            points_ellipse[:, 0]+mean[0], points_ellipse[:, 1]+mean[1],
+            c="g"
         )
-        ax.add_patch(ellipse)
 
 
 if __name__ == "__main__":
@@ -118,16 +143,17 @@ if __name__ == "__main__":
     arr_cov = np.array(list_cov)
 
     fig, ax = plt.subplots()
-    plot_state(arr_state[:, ::2], arr_cov, ax)
-
+    measurements *= 0.3048  # feet to meters
     ax.scatter(
         measurements[:, 0], measurements[:, 1],
         label="measurements", facecolors="none", edgecolors="black"
     )
-    plt.scatter(
+    plt.plot(
         arr_state[:, 0], arr_state[:, 2],
-        label="filtered"
+        label="filtered", lw=2, c="red"
     )
+    plot_states(arr_state[:, ::2], arr_cov, ax)
+    plt.ylim(-3, 4)
 
     plt.xlabel("X")
     plt.ylabel("Y")

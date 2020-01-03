@@ -16,16 +16,18 @@ class Sensor:
 
 
 if __name__ == "__main__":
-    pos = (4, 3)
-    vel = (2, 1)
+    pos = (0, 0)
+    vel = (2, .2)
     sensor = Sensor(pos, vel)
 
-    n_measurements = 50
+    n_measurements = 30
     measurements = np.array([sensor.read() for _ in range(n_measurements)])
+    measurements *= 0.3048  # feet to meters
     plt.scatter(
         measurements[:, 0], measurements[:, 1],
         label="measurements", facecolors="none", edgecolors="black"
     )
+    plt.ylim(-3, 4)
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.legend()
