@@ -45,15 +45,16 @@ def generate_measurements(path_video="src/track_ball/singleball.mov",
                         # cv.imwrite(f"input/{idx_frame:02d}.png", frame)
 
                         # ax.clear()
+                        # ax.imshow(cv.cvtColor(frame, cv.COLOR_BGR2RGB))
                         # ax.scatter(
                             # m[0][0], m[0][1],
-                            # label="measurements", facecolors="none", edgecolors="black"
+                            # label="measurements", facecolors="none", edgecolors="cyan", lw=3
                         # )
                         # ax.set_xlim(0, width_frame)
                         # ax.set_ylim(height_frame, 0)
                         # ax.legend()
                         # plt.axis("off")
-                        # fig.savefig(f"measurements/{idx_frame:02d}.png")
+                        # fig.savefig(f"visual_results/measurements/{idx_frame:02d}.png")
 
                         cv.waitKey(160)
     capture.release()

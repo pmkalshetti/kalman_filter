@@ -25,18 +25,7 @@ A ball travels on the ground with approximately constant velocity. The ball is d
 ```python
 python src/track_ball/filter.py
 ```
-#### Input video
-![input video](media_readme/input.gif)
-
-#### Background subtraction
-![background subtraction](media_readme/mask.gif)
-
-#### Measurements
-![measurements](media_readme/measurements.gif)
-
-#### Filtered result
-![filtered result](media_readme/filtered.gif)
-
+![ball tracking video](media_readme/ball_tracking.gif)
 
 # References
 1. [Kalman and Bayesian Filters in Python by Roger R. Labbe](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python)

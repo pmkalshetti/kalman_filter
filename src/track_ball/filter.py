@@ -123,7 +123,7 @@ def run_filter(kalman_filter, measurements):
         kalman_filter.predict()
 
         # handle occlusion
-        if measurement[0] != -1:
+        if measurement[0] != -1 and measurement[1] > 200:
             kalman_filter.correct(np.reshape(measurement, (2, 1)))
 
             state = np.copy(kalman_filter.statePost)[:, 0]
@@ -156,8 +156,9 @@ if __name__ == "__main__":
     # read measurements
     path_measurements = "src/track_ball/trajectory_ball.txt"
     measurements = np.loadtxt(path_measurements)
-    measurements = clean_measurements(measurements)
-    measurements = np.delete(measurements, [0, 14, 24], 0)
+    # idx_valid_measurement = np.where(measurements[:, 0] > 0)[0][0]
+    # measurements = clean_measurements(measurements)
+    # measurements = np.delete(measurements, [0, 14, 24], 0)
 
     # fig, ax = plt.subplots()
     # ax.scatter(measurements[:, 0], measurements[:, 1])
@@ -185,7 +186,7 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     ax.scatter(
         measurements[:, 0], measurements[:, 1],
-        label="measurements", facecolors="none", edgecolors="black"
+        label="measurements", facecolors="none", edgecolors="yellow", lw=2
     )
     plt.plot(
         arr_state[:, 0], arr_state[:, 1],
@@ -200,22 +201,26 @@ if __name__ == "__main__":
     plt.ylabel("Y (in pixels)")
     plt.legend()
     plt.show()
+    # exit()
 
-    # save results
+    # # save results
     # fig, ax = plt.subplots()
-    # for idx in range(len(measurements)):
+    # for idx in range(1, len(measurements)+1):
         # ax.clear()
+        # img = plt.imread(f"visual_results/video/{idx:02d}.png")
+        # ax.imshow(img)
         # ax.scatter(
-            # measurements[:idx+1, 0], measurements[:idx+1, 1],
-            # label="measurements", facecolors="none", edgecolors="black"
+            # measurements[:idx, 0], measurements[:idx, 1],
+            # label="measurements", facecolors="none", edgecolors="yellow",
+            # lw=2
         # )
         # ax.plot(
-            # arr_state[:idx+1, 0], arr_state[:idx+1, 1],
+            # arr_state[:idx, 0], arr_state[:idx, 1],
             # label="filtered", lw=2, c="red"
         # )
         # ax.legend()
-        # plot_states(arr_state[:idx+1], arr_cov[:idx+1], ax)
+        # plot_states(arr_state[:idx], arr_cov[:idx], ax)
         # plt.xlim(0, 480)
         # plt.ylim(360, 0)
         # plt.axis("off")
-        # fig.savefig(f"tracked/{idx:02d}.png", bbox_inches='tight', pad_inches=0)
+        # fig.savefig(f"visual_results/filtered/{idx:02d}.png", bbox_inches='tight', pad_inches=0)
