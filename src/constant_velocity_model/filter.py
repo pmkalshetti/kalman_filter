@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-from sensor import Sensor
+from data import PositionSensor
 
 
 def construct_filter(dim_state, dim_measurement,
@@ -22,7 +22,7 @@ def construct_filter(dim_state, dim_measurement,
     return kf
 
 
-def design_simple_filter():
+def design_filter():
     dim_state = 4  # [x, vx, y, vy]
     dim_measurement = 2  # [x, y]
 
@@ -118,9 +118,32 @@ def plot_states(means, covariances, ax):
         )
 
 
+def run_filter(kalman_filter, measurements):
+    """Runs kalman filter and returns states and covariances."""
+    list_state, list_cov = [], []
+    for measurement in measurements:
+        kalman_filter.predict()
+        kalman_filter.correct(np.reshape(measurement, (2, 1)))
+
+        list_state.append(np.copy(kalman_filter.statePost)[:, 0])
+
+        cov_state = np.copy(kalman_filter.errorCovPost)
+
+        # store covariance between x and y
+        cov_x_y = np.array([
+            [cov_state[0, 0], cov_state[2, 0]],
+            [cov_state[0, 2], cov_state[2, 2]]
+        ])
+        list_cov.append(cov_x_y)
+    arr_state = np.array(list_state)
+    arr_cov = np.array(list_cov)
+
+    return arr_state, arr_cov
+
+
 if __name__ == "__main__":
     # design kalman filter
-    design = design_simple_filter()
+    design = design_filter()
     kalman_filter = construct_filter(*design)
 
     # simulate measurements
@@ -128,20 +151,13 @@ if __name__ == "__main__":
     pos_true = (0, 0)
     vel_true = (2, .2)
     R_std = 0.35
-    sensor = Sensor(pos_true, vel_true, R_std)
+    sensor = PositionSensor(pos_true, vel_true, R_std)
     measurements = np.array([sensor.read() for _ in range(n_measurements)])
 
     # run filter
-    list_state, list_cov = [], []
-    for measurement in measurements:
-        kalman_filter.predict()
-        kalman_filter.correct(np.reshape(measurement, (2, 1)))
+    arr_state, arr_cov = run_filter(kalman_filter, measurements)
 
-        list_state.append(np.copy(kalman_filter.statePost)[:, 0])
-        list_cov.append(np.copy(kalman_filter.errorCovPost))
-    arr_state = np.array(list_state)
-    arr_cov = np.array(list_cov)
-
+    # plot
     fig, ax = plt.subplots()
     measurements *= 0.3048  # feet to meters
     ax.scatter(
@@ -155,7 +171,7 @@ if __name__ == "__main__":
     plot_states(arr_state[:, ::2], arr_cov, ax)
     plt.ylim(-3, 4)
 
-    plt.xlabel("X")
-    plt.ylabel("Y")
+    plt.xlabel("X (in m)")
+    plt.ylabel("Y (in m)")
     plt.legend()
     plt.show()

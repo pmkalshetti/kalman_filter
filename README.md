@@ -2,17 +2,11 @@
 
 The aim is to track an object based on noisy measurements in 2D. This is achieved using a Kalman Filter.
 
-
-## Usage
-1. Generate data
+## 1. Constant Velocity Model
 The sensor reads 2D position of the object. We assume a fixed velocity for the object. The final reading is perturbed with Gaussian noise.
 ```python
-python src/sensor.py
+python src/constant_velocity_model/filter.py
 ```
-![Measurements](media_readme/measurements.png)
+![Constant Velocity Model](media_readme/constant_velocity_model.png)
 
-2. Filter
-```python
-python src/simple_filter.py
-```
-![Filter (simple)](media_readme/filter_simple.png)
+The ellipse indicates 95% confidence interval for the covariance matrix between x and y.

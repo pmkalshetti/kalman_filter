@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Sensor:
+class PositionSensor:
     def __init__(self, pos=(0, 0), vel=(0, 0), std_noise=1):
         self.pos = np.array(pos, dtype=np.float64)
         self.vel = np.array(vel, dtype=np.float64)
@@ -18,7 +18,7 @@ class Sensor:
 if __name__ == "__main__":
     pos = (0, 0)
     vel = (2, .2)
-    sensor = Sensor(pos, vel)
+    sensor = PositionSensor(pos, vel)
 
     n_measurements = 30
     measurements = np.array([sensor.read() for _ in range(n_measurements)])
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         label="measurements", facecolors="none", edgecolors="black"
     )
     plt.ylim(-3, 4)
-    plt.xlabel("X")
-    plt.ylabel("Y")
+    plt.xlabel("X (in mm)")
+    plt.ylabel("Y (in mm)")
     plt.legend()
     plt.show()
