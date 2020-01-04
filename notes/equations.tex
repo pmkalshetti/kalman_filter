@@ -1,0 +1,95 @@
+% !TEX encoding = UTF-8 Unicode
+% !TEX TS-program = xelatex
+
+% default font size and paper size
+\documentclass[10pt, a4paper]{article}
+
+% set the page margins
+\usepackage[a4paper, margin=0.7in]{geometry}
+
+% setup the language
+\usepackage[english]{babel}
+
+% define hyphenation rules
+\hyphenation{some-long-word}
+
+\usepackage{style}
+
+\usepackage[backref=true]{biblatex}
+\addbibresource{references.bib}
+
+\begin{document}
+
+\todaydate{}
+\topic{Designing Kalman Filters}
+
+\section*{Overview}
+The Kalman Filter involves two steps: \textit{predict} and \textit{correct}. Each of these steps is detailed below.
+
+\subsection*{\textit{Predict}}
+This step uses the process model to predict the current state based on the previous state and the control input at the current time.
+The equations describing this idea are
+\begin{align}
+  \bar{\mathbf{x}} &= \mathbf{Ax} + \mathbf{Bu} \\
+  \bar{\mathbf{P}} &= \mathbf{APA}^\top
+\end{align}
+where $\mathbf{x}$ is the state vector, $\mathbf{A}$ is the state transition matrix, $\mathbf{B}$ is the control matrix, $\mathbf{u}$ is the control input and $\mathbf{P}$ is the state covariance matrix.
+
+\subsection*{\textit{Correct}}
+This step corrects the current prediction using the current measurement as follows.
+\begin{align}
+  \mathbf{x} &= \bar{\mathbf{x}} + \mathbf{Ky} \\
+  \mathbf{P} &= (\mathbf{I} - \mathbf{KH})\bar{\mathbf{P}}
+\end{align}
+
+where
+
+\begin{align*}
+  \mathbf{y} &= \mathbf{z} - \mathbf{H}\bar{\mathbf{x}} \\
+  \mathbf{K} &= \bar{\mathbf{P}}\mathbf{H}^\top (\mathbf{H}\bar{\mathbf{P}}\mathbf{H}^\top + \mathbf{R})^{-1}
+\end{align*}
+
+and $\mathbf{H}$ is the measurement matrix, $\mathbf{R}$ is the measurement noise covariance and $\mathbf{I}$ is the identity matrix.
+The above equations assume that a multivariate Gaussian is used to represent the process model, measurement model and the state.
+
+
+\section{Constant Velocity Model}
+The state transition model of an object under the constant velocity model is given by
+\[
+\begin{bmatrix}
+x \\
+\dot{x} \\
+y \\
+\dot{y}
+\end{bmatrix}
+= 
+\begin{bmatrix}
+1 & \Delta t & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 1 & \Delta t \\
+0 & 0 & 0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+x \\
+\dot{x} \\
+y \\
+\dot{y}
+\end{bmatrix}
+\]
+
+The measurement only involves position, however incorporating velocity in the state model improves the estimates.
+
+\section{Constant Acceleration Model}
+A position of a ball thrown in vacuum id given by
+
+\begin{align}
+    y &= \frac{g}{2} t^2 + v_{y_0}t + y_0 \\
+    x &= v_{x_0}t + x_0
+\end{align}
+
+where $g$ is the gravitational constant, $t$ is time, $v_{x0}$ and $v_{y0}$ are the initial velocities in the x and y plane.
+The state transition model can be similar to the constant velocity model and the gravitational acceleration can be incorporated in the control input $\mathbf{u}$.
+
+\printbibliography
+
+\end{document}
