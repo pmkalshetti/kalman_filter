@@ -40,10 +40,9 @@ def design_filter(x0=0, y0=0, dt=1.,
     cov_process = np.eye(dim_state) * var_process
 
     # H
-    factor_conversion = 1/.3048  # state in m, measurement is feet.
     mat_measurement = np.array([
-        [factor_conversion, 0, 0, 0],
-        [0, 0, factor_conversion, 0]
+        [1., 0, 0, 0],
+        [0, 0, 1., 0]
     ])
 
     # R
@@ -101,12 +100,20 @@ def get_ellipse_from_covariance(mat_cov, val_chisquare=2.4477):
 
 
 def plot_states(means, covariances, ax):
+    idx = 0
     for mean, cov in zip(means, covariances):
         points_ellipse = get_ellipse_from_covariance(cov)
-        ax.plot(
-            points_ellipse[:, 0]+mean[0], points_ellipse[:, 1]+mean[1],
-            c="g"
-        )
+        if idx == 0:
+            idx += 1
+            ax.plot(
+                points_ellipse[:, 0]+mean[0], points_ellipse[:, 1]+mean[1],
+                c="g", label="covariance"
+            )
+        else:
+            ax.plot(
+                points_ellipse[:, 0]+mean[0], points_ellipse[:, 1]+mean[1],
+                c="g"
+            )
 
 
 def run_filter(kalman_filter, measurements):
@@ -119,11 +126,14 @@ def run_filter(kalman_filter, measurements):
         if measurement[0] != -1:
             kalman_filter.correct(np.reshape(measurement, (2, 1)))
 
-        state = np.copy(kalman_filter.statePost)[:, 0]
+            state = np.copy(kalman_filter.statePost)[:, 0]
+            cov_state = np.copy(kalman_filter.errorCovPost)
+        else:
+            state = np.copy(kalman_filter.statePre[:, 0])
+            cov_state = np.copy(kalman_filter.errorCovPre)
+
         x, y = state[0], state[2]
         list_state.append((x, y))
-
-        cov_state = np.copy(kalman_filter.errorCovPost)
 
         # store covariance between x and y
         cov_x_y = np.array([
@@ -137,21 +147,33 @@ def run_filter(kalman_filter, measurements):
     return arr_state, arr_cov
 
 
+def clean_measurements(measurements):
+    idx_valid_measurement = np.where(measurements[:, 0] > 0)[0][0]
+    return measurements[idx_valid_measurement:]
+
+
 if __name__ == "__main__":
     # read measurements
-    path_measurements = "trajectory.txt"
+    path_measurements = "src/track_ball/trajectory_ball.txt"
     measurements = np.loadtxt(path_measurements)
+    measurements = clean_measurements(measurements)
+    measurements = np.delete(measurements, [0, 14, 24], 0)
+
+    # fig, ax = plt.subplots()
+    # ax.scatter(measurements[:, 0], measurements[:, 1])
+    # for idx, measurement in enumerate(measurements):
+        # ax.annotate(str(idx), measurement)
+    # plt.show()
+    # exit()
 
     # design kalman filter
-    x_init, y_init = 0., 1.
-    velocity_init = 50.
-    angle_deg_init = 60
-    var_process = 0.1  # Q
-    var_measurement = 3.  # R
+    x_init, y_init = measurements[1]
+    var_process = 1.  # Q
+    var_measurement = 1.  # R
     var_state = 1.  # P
-    dt = 1/20  # assuming fps of video
+    dt = 1.  # assuming fps of video
     design = design_filter(
-        x_init, y_init, velocity_init, angle_deg_init, dt,
+        x_init, y_init, dt,
         var_process, var_measurement, var_state
     )
     kalman_filter = construct_filter(*design)
@@ -170,9 +192,30 @@ if __name__ == "__main__":
         label="filtered", lw=2, c="red"
     )
     plot_states(arr_state, arr_cov, ax)
-    plt.ylim(-3, 4)
+    plt.xlim(0, 480)
+    plt.ylim(360, 0)
+    plt.axis("off")
 
-    plt.xlabel("X (in m)")
-    plt.ylabel("Y (in m)")
+    plt.xlabel("X (in pixels)")
+    plt.ylabel("Y (in pixels)")
     plt.legend()
     plt.show()
+
+    # save results
+    # fig, ax = plt.subplots()
+    # for idx in range(len(measurements)):
+        # ax.clear()
+        # ax.scatter(
+            # measurements[:idx+1, 0], measurements[:idx+1, 1],
+            # label="measurements", facecolors="none", edgecolors="black"
+        # )
+        # ax.plot(
+            # arr_state[:idx+1, 0], arr_state[:idx+1, 1],
+            # label="filtered", lw=2, c="red"
+        # )
+        # ax.legend()
+        # plot_states(arr_state[:idx+1], arr_cov[:idx+1], ax)
+        # plt.xlim(0, 480)
+        # plt.ylim(360, 0)
+        # plt.axis("off")
+        # fig.savefig(f"tracked/{idx:02d}.png", bbox_inches='tight', pad_inches=0)
