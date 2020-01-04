@@ -22,13 +22,13 @@ def construct_filter(dim_state, dim_measurement,
     return kf
 
 
-def design_filter():
+def design_filter(x0=0, y0=0, dt=1.,
+                  var_process=0.001, var_measurement=1., var_state=500.):
     dim_state = 4  # [x, vx, y, vy]
     dim_measurement = 2  # [x, y]
 
     # A
     # constant velocity model
-    dt = 1.  # time step is 1s
     mat_transition = np.array([
         [1, dt, 0, 0],
         [0, 1, 0, 0],
@@ -38,13 +38,7 @@ def design_filter():
 
     # Q
     # noise is constant for each time period
-    # var_process = 0.04 ** 2
-    cov_process = np.array([
-        [0, 0.001, 0, 0],
-        [0.001, 0.002, 0, 0],
-        [0, 0, 0, 0.001],
-        [0, 0, 0.001, 0.002]
-    ])
+    cov_process = np.eye(dim_state) * var_process
 
     # H
     factor_conversion = 1/.3048  # state in m, measurement is feet.
@@ -55,7 +49,6 @@ def design_filter():
 
     # R
     # assume independent Gaussian for x and y
-    var_measurement = 0.35**2  # feet^2
     cov_measurement = np.array([
         [var_measurement, 0],
         [0, var_measurement]
@@ -63,12 +56,11 @@ def design_filter():
 
     # x
     # initial state
-    state_init = np.reshape(np.array([0, 0, 0, 0.]), (dim_state, 1))
+    state_init = np.reshape(np.array([x0, 0, y0, 0.]), (dim_state, 1))
 
     # P
     # initial state covariance
-    var_state_init = 500.
-    cov_state_init = np.eye(dim_state) * var_state_init
+    cov_state_init = np.eye(dim_state) * var_state
 
     return (dim_state, dim_measurement,
             mat_transition, cov_process,
@@ -128,7 +120,6 @@ def run_filter(kalman_filter, measurements):
         state = np.copy(kalman_filter.statePost)[:, 0]
         x, y = state[0], state[2]
         list_state.append((x, y))
-        # list_state.append(np.copy(kalman_filter.statePost)[:, 0])
 
         cov_state = np.copy(kalman_filter.errorCovPost)
 
@@ -154,7 +145,15 @@ if __name__ == "__main__":
     measurements = np.array([sensor.read() for _ in range(n_measurements)])
 
     # design kalman filter
-    design = design_filter()
+    x_init = 0
+    y_init = 0
+    dt = 1.
+    var_process = 0.001
+    var_measurement = 1.
+    var_state = 500.
+    design = design_filter(
+        x_init, y_init, dt, var_process, var_measurement, var_state
+    )
     kalman_filter = construct_filter(*design)
 
     # run filter
@@ -171,7 +170,7 @@ if __name__ == "__main__":
         arr_state[:, 0], arr_state[:, 1],
         label="filtered", lw=2, c="red"
     )
-    plot_states(arr_state, arr_cov, ax)
+    # plot_states(arr_state, arr_cov, ax)
     plt.ylim(-3, 4)
 
     plt.xlabel("X (in m)")

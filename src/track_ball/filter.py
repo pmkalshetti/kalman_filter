@@ -1,13 +1,11 @@
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
-from data import generate_measurements
 
 
 def construct_filter(dim_state, dim_measurement,
                      mat_transition, cov_process,
                      mat_measurement, cov_measurement,
-                     mat_control,
                      state_init, cov_state_init):
     kf = cv.KalmanFilter(dim_state, dim_measurement)
 
@@ -17,26 +15,24 @@ def construct_filter(dim_state, dim_measurement,
     kf.measurementMatrix = mat_measurement
     kf.measurementNoiseCov = cov_measurement
 
-    kf.controlMatrix = mat_control
-
     kf.statePost = state_init
     kf.errorCovPost = cov_state_init
 
     return kf
 
 
-def design_filter(x, y, angle_deg, velocity,
-                  dt=1/10, var_process=0.5, var_measurement=0., var_state=1.):
+def design_filter(x0=0, y0=0, dt=1.,
+                  var_process=0.001, var_measurement=1., var_state=500.):
     dim_state = 4  # [x, vx, y, vy]
     dim_measurement = 2  # [x, y]
 
     # A
     # constant velocity model
     mat_transition = np.array([
-        [1, dt, 0, 0],  # x = x0 + vx*dt
-        [0, 1, 0, 0],   # vx = vx0
-        [0, 0, 1, dt],  # y = y0 + vy*dt
-        [0, 0, 0, 1]    # vy = vy0
+        [1, dt, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, dt],
+        [0, 0, 0, 1]
     ])
 
     # Q
@@ -44,9 +40,10 @@ def design_filter(x, y, angle_deg, velocity,
     cov_process = np.eye(dim_state) * var_process
 
     # H
+    factor_conversion = 1/.3048  # state in m, measurement is feet.
     mat_measurement = np.array([
-        [1., 0, 0, 0],  # zx = x
-        [0, 0, 1., 0]   # zy = y
+        [factor_conversion, 0, 0, 0],
+        [0, 0, factor_conversion, 0]
     ])
 
     # R
@@ -56,18 +53,9 @@ def design_filter(x, y, angle_deg, velocity,
         [0, var_measurement]
     ])
 
-    # B
-    mat_control = np.reshape(
-        np.array([0, 0, 0, dt]),  # vy += -g*dt
-        (4, 1)
-    )
-
     # x
     # initial state
-    angle = np.deg2rad(angle_deg)
-    vel_x = velocity * np.cos(angle)
-    vel_y = velocity * np.sin(angle)
-    state_init = np.reshape(np.array([x, vel_x, y, vel_y]), (dim_state, 1))
+    state_init = np.reshape(np.array([x0, 0, y0, 0.]), (dim_state, 1))
 
     # P
     # initial state covariance
@@ -76,34 +64,7 @@ def design_filter(x, y, angle_deg, velocity,
     return (dim_state, dim_measurement,
             mat_transition, cov_process,
             mat_measurement, cov_measurement,
-            mat_control,
             state_init, cov_state_init)
-
-
-def run_filter(kalman_filter, measurements):
-    """Runs kalman filter and returns states and covariances."""
-    list_state, list_cov = [], []
-    control_input = np.reshape(-9.8, (1, 1))
-    for measurement in measurements:
-        kalman_filter.predict(control_input)
-        kalman_filter.correct(np.reshape(measurement, (2, 1)))
-
-        state = np.copy(kalman_filter.statePost)[:, 0]
-        x, y = state[0], state[2]
-        list_state.append((x, y))
-
-        cov_state = np.copy(kalman_filter.errorCovPost)
-
-        # store covariance between x and y
-        cov_x_y = np.array([
-            [cov_state[0, 0], cov_state[2, 0]],
-            [cov_state[0, 2], cov_state[2, 2]]
-        ])
-        list_cov.append(cov_x_y)
-    arr_state = np.array(list_state)
-    arr_cov = np.array(list_cov)
-
-    return arr_state, arr_cov
 
 
 def get_ellipse_from_covariance(mat_cov, val_chisquare=2.4477):
@@ -139,7 +100,7 @@ def get_ellipse_from_covariance(mat_cov, val_chisquare=2.4477):
     return points_ellipse
 
 
-def plot_cov_ellipses(means, covariances, ax):
+def plot_states(means, covariances, ax):
     for mean, cov in zip(means, covariances):
         points_ellipse = get_ellipse_from_covariance(cov)
         ax.plot(
@@ -148,14 +109,38 @@ def plot_cov_ellipses(means, covariances, ax):
         )
 
 
+def run_filter(kalman_filter, measurements):
+    """Runs kalman filter and returns states and covariances."""
+    list_state, list_cov = [], []
+    for measurement in measurements:
+        kalman_filter.predict()
+
+        # handle occlusion
+        if measurement[0] != -1:
+            kalman_filter.correct(np.reshape(measurement, (2, 1)))
+
+        state = np.copy(kalman_filter.statePost)[:, 0]
+        x, y = state[0], state[2]
+        list_state.append((x, y))
+
+        cov_state = np.copy(kalman_filter.errorCovPost)
+
+        # store covariance between x and y
+        cov_x_y = np.array([
+            [cov_state[0, 0], cov_state[2, 0]],
+            [cov_state[0, 2], cov_state[2, 2]]
+        ])
+        list_cov.append(cov_x_y)
+    arr_state = np.array(list_state)
+    arr_cov = np.array(list_cov)
+
+    return arr_state, arr_cov
+
+
 if __name__ == "__main__":
-    # simulate measurements
-    x, y = 0., 1.  # m
-    velocity = 50.  # m/s
-    angle_deg = 60  # degree
-    dt = 1/10  # s
-    noise = [3, 3]
-    measurements = generate_measurements(x, y, velocity, angle_deg, dt, noise)
+    # read measurements
+    path_measurements = "trajectory.txt"
+    measurements = np.loadtxt(path_measurements)
 
     # design kalman filter
     x_init, y_init = 0., 1.
@@ -164,6 +149,7 @@ if __name__ == "__main__":
     var_process = 0.1  # Q
     var_measurement = 3.  # R
     var_state = 1.  # P
+    dt = 1/20  # assuming fps of video
     design = design_filter(
         x_init, y_init, velocity_init, angle_deg_init, dt,
         var_process, var_measurement, var_state
@@ -183,7 +169,8 @@ if __name__ == "__main__":
         arr_state[:, 0], arr_state[:, 1],
         label="filtered", lw=2, c="red"
     )
-    # plot_cov_ellipses(arr_state, arr_cov, ax)
+    plot_states(arr_state, arr_cov, ax)
+    plt.ylim(-3, 4)
 
     plt.xlabel("X (in m)")
     plt.ylabel("Y (in m)")
