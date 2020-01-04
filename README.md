@@ -22,3 +22,8 @@ python src/constant_acceleration_model/filter.py
 
 ## 3. Track Ball under Occlusion
 A ball travels on the ground with approximately constant velocity. The ball is detected using background subtraction method which gives the noisy measurements. There is an instant in the video when the ball is occluded. Kalman filter is used to track this ball even under occlusion.
+
+
+# References
+1. [Kalman and Bayesian Filters in Python by Roger R. Labbe](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python)
+2. [OpenCV Documentation](https://docs.opencv.org/trunk/dd/d6a/classcv_1_1KalmanFilter.html)
